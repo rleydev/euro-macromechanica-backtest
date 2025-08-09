@@ -1,0 +1,49 @@
+# =========================
+#   TEXT FILES — LF
+# =========================
+*.md        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.txt       text eol=lf
+*.csv       text eol=lf
+*.json      text eol=lf
+*.py        text eol=lf
+*.ini       text eol=lf
+*.cfg       text eol=lf
+*.tmpl      text eol=lf
+
+# =========================
+#   BINARY FILES — RAW
+# =========================
+*.csv.gz    -text
+*.sha256    -text
+*.zip       -text
+*.tar       -text
+*.tar.gz    -text
+*.tar.xz    -text
+*.png       -text
+*.jpg       -text
+*.jpeg      -text
+*.gif       -text
+*.pdf       -text
+
+# =========================
+#   HISTDATA / RAW DATA
+# =========================
+DAT_ASCII_* -text
+
+# =========================
+#   SPECIAL FOLDERS
+# =========================
+# Analysis artifacts (results .csv.gz, PNG, etc.)
+out/*        -text
+# SHA-256 manifests
+manifests/*  -text
+# Raw input data (if stored in /input)
+input/*      -text
+# Templates — as text, with LF
+templates/*  text eol=lf
+# Documentation
+docs/*       text eol=lf
+# Configs
+config/*     text eol=lf
