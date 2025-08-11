@@ -11,39 +11,44 @@
 *.ini       text eol=lf
 *.cfg       text eol=lf
 *.tmpl      text eol=lf
+Dockerfile  text eol=lf
+Makefile    text eol=lf
 
 # =========================
 #   BINARY FILES — RAW
 # =========================
-*.csv.gz    -text
-*.sha256    -text
-*.zip       -text
-*.tar       -text
-*.tar.gz    -text
-*.tar.xz    -text
-*.png       -text
-*.jpg       -text
-*.jpeg      -text
-*.gif       -text
-*.pdf       -text
+*.csv.gz    binary
+*.sha256    binary
+*.sig       binary
+*.ots       binary
+*.zip       binary
+*.tar       binary
+*.tar.gz    binary
+*.tar.xz    binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.pdf       binary
 
 # =========================
 #   HISTDATA / RAW DATA
 # =========================
-DAT_ASCII_* -text
+
+DAT_ASCII_* binary
 
 # =========================
 #   SPECIAL FOLDERS
 # =========================
-# Analysis artifacts (results .csv.gz, PNG, etc.)
-out/*        -text
+# artifacts (results .csv.gz, PNG etc)
+out/*        binary
 # SHA-256 manifests
-manifests/*  -text
-# Raw input data (if stored in /input)
-input/*      -text
-# Templates — as text, with LF
+manifests/*  binary
+# Raw entry data
+input/*      binary
+# templates, as text with LF
 templates/*  text eol=lf
-# Documentation
+# docs
 docs/*       text eol=lf
-# Configs
+# conf
 config/*     text eol=lf
