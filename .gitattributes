@@ -20,6 +20,7 @@ Makefile    text eol=lf
 *.csv.gz    binary
 *.sha256    binary
 *.sig       binary
+*.asc       binary
 *.ots       binary
 *.zip       binary
 *.tar       binary
