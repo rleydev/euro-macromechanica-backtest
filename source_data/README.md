@@ -12,7 +12,7 @@ The historical quotes were obtained from **[HistData](https://www.histdata.com)*
 
 To ensure transparency and prove the authenticity of the original data, a multi-level verification and proof process was carried out:  
 
-1. **Annual files** (CSV with minute data and TXT reports) have their own **SHA-256 hashes** and **GPG signatures** (`.sig`).  
+1. **Annual files** (CSV with minute data and TXT reports) have their own **SHA-256 hashes** and **GPG signatures** (`.sig`/`asc`).  
 2. A **single archive** `source_data_2001-2025.tar.xz` contains all annual data and also has its own **SHA-256 hash**, **GPG signature**, and an **OTS anchor** (OpenTimestamps) in the blockchain.  
 3. A **Git repository with Verified commits (GPG)** records the history of changes and protects against file tampering.  
 
