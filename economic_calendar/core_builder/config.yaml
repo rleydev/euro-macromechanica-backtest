@@ -1,0 +1,125 @@
+project:
+  name: Economic Calendar 2001–2025
+  period_start: '2001-01-01'
+  period_end: '2025-07-31'
+include_impacts:
+- high
+- medium
+official_domains:
+- federalreserve.gov
+- frb.org
+- newyorkfed.org
+- bostonfed.org
+- philadelphiafed.org
+- clevelandfed.org
+- richmondfed.org
+- atlantafed.org
+- chicagofed.org
+- stlouisfed.org
+- minneapolisfed.org
+- kansascityfed.org
+- dallasfed.org
+- frbsf.org
+- bls.gov
+- bea.gov
+- census.gov
+- ecb.europa.eu
+- eurostat.ec.europa.eu
+- pmi.spglobal.com
+- ons.gov.uk
+- bankofengland.co.uk
+- snb.ch
+- seco.admin.ch
+- statistics.admin.ch
+- ismworld.org
+- destatis.de
+- bundesbank.de
+- insee.fr
+- banque-france.fr
+- istat.it
+- bancaditalia.it
+- ine.es
+- bde.es
+secondary_news_domains:
+- reuters.com
+- bloomberg.com
+time_source_priority:
+- official
+- secondary
+- fallback
+tz_aliases:
+  ET: America/New_York
+  EST: America/New_York
+  EDT: America/New_York
+  CT: America/Chicago
+  CST: America/Chicago
+  CDT: America/Chicago
+  MT: America/Denver
+  MST: America/Denver
+  MDT: America/Denver
+  PT: America/Los_Angeles
+  PST: America/Los_Angeles
+  PDT: America/Los_Angeles
+  GMT: Europe/London
+  BST: Europe/London
+  CET: Europe/Berlin
+  CEST: Europe/Berlin
+  UTC: Etc/UTC
+weights:
+  authenticity_weight: 0.95
+  timing_weight: 0.05
+impact_rules_notes: "США:\n  - FOMC внеплановые: high\n  - FOMC плановые: decision\
+  \ — high; statement — medium; minutes — medium\n  - ISM PMI (manufacturing, services):\
+  \ high\nЕЦБ/Еврозона:\n  - Ставка/пресс-конференция: high\n  - EA Unemployment:\
+  \ high\n  - EA HICP flash: medium; EA HICP full: high\n  - DE flash CPI: medium\n\
+  UK/CH: все события — medium\n"
+exclusions:
+  US:
+    titles_exact:
+    - Advance Durable Goods Orders
+    - US Housing Starts & Building Permits (New Residential Construction)
+    - Factory Orders (M3)
+    - Business Inventories (Manufacturing & Trade Inventories & Sales)
+    - 'Wholesale Trade: Sales & Inventories'
+    - New Home Sales (C25)
+    - Existing Home Sales (NAR)
+    - Construction Spending (C30)
+    - NAHB Housing Market Index
+    - Pending Home Sales (NAR)
+    - Productivity & Costs
+    - Employment Cost Index (ECI)
+    - Current Account (BEA)
+    - University of Michigan Consumer Sentiment
+    - Conference Board LEI (Leading Economic Index)
+    weekly_series:
+    - Initial Jobless Claims
+  EA:
+    titles_exact:
+    - EA Industrial Production
+    - EA Retail Trade
+    - EA Producer Price Index (PPI)
+    - EA Trade Balance
+    - EA Economic Sentiment Indicator (ESI)
+gov_like_patterns:
+- ^(?:.*\.)?federalreserve\.gov$
+- ^(?:.*\.)?newyorkfed\.org$
+- ^(?:.*\.)?stlouisfed\.org$
+- ^(?:.*\.)?philadelphiafed\.org$
+- ^(?:.*\.)?chicagofed\.org$
+- ^(?:.*\.)?clevelandfed\.org$
+- ^(?:.*\.)?minneapolisfed\.org$
+- ^(?:.*\.)?dallasfed\.org$
+- ^(?:.*\.)?kansascityfed\.org$
+- ^(?:.*\.)?sanfranciscofed\.org$
+- ^(?:.*\.)?richmondfed\.org$
+- ^(?:.*\.)?bostonfed\.org$
+- ^(?:.*\.)?atlantafed\.org$
+- ^(?:.*\.)?ecb\.europa\.eu$
+- ^(?:.*\.)?bundesbank\.de$
+- ^(?:.*\.)?banque-france\.fr$
+- ^(?:.*\.)?bancaditalia\.it$
+- ^(?:.*\.)?bde\.es$
+- ^(?:.*\.)?snb\.ch$
+- ^(?:.*\.)?bankofengland\.co\.uk$
+official_alias_domains: []
+canonical_host_map: {}
