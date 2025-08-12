@@ -561,6 +561,14 @@ def stage_build(year:int, infile:Path, outfile:Path):
 def stage_report(year:int, calendar_gz:Path, outfile:Path):
     with gzip.open(calendar_gz, "rt", encoding="utf-8") as fh:
         df = pd.read_csv(fh)
+
+    # Prepare manual-events slice for metrics (to avoid calendar certainty=all confirmed)
+    try:
+        me = pd.read_csv(Path("manual_events.csv"))
+        me["date_local"] = pd.to_datetime(me["date_local"], errors="coerce")
+        df_me = me[(me["date_local"]>=pd.Timestamp(f"{year}-01-01")) & (me["date_local"]<=pd.Timestamp(f"{year}-12-31"))].copy()
+    except Exception:
+        df_me = None
     if 'datetime_utc' not in df.columns and 'dt_utc' in df.columns:
         df = df.rename(columns={'dt_utc':'datetime_utc'})
     total = len(df)
@@ -615,8 +623,13 @@ def stage_report(year:int, calendar_gz:Path, outfile:Path):
         ot_pct = (ot/total_b*100) if total_b else 0.0
         lines.append(f"- Source breakdown: CB **{cb_pct:.1f}%** ({cb}/{total_b}), STAT **{st_pct:.1f}%** ({st}/{total_b}), Other **{ot_pct:.1f}%** ({ot}/{total_b})\n")
         # Timing (exact time = not estimated/secondary)
-    exact_time = int(df[~df['certainty'].fillna('').str.lower().isin(['estimated','secondary'])].shape[0]) if total else 0
-    exact_time_pct = (exact_time/total*100) if total else 0.0
+    cert_series = (df['certainty'].fillna('').astype(str).str.lower() if 'certainty' in df.columns 
+    else pd.Series(['estimated']*len(df)))
+    tim_src = df_me if df_me is not None and len(df_me)>0 else df
+    total_t = len(tim_src)
+    cert_series = (tim_src['certainty'].fillna('').astype(str).str.lower() if 'certainty' in tim_src.columns else pd.Series(['estimated']*len(tim_src)))
+    exact_time = int((~cert_series.isin(['estimated','secondary'])).sum()) if total_t else 0
+    exact_time_pct = (exact_time/total_t*100) if total_t else 0.0
     w_auth, w_time = get_backtest_weights()
     score = (authenticity_pct*w_auth + exact_time_pct*w_time) if total else 0.0
     lines.append(f"\n## Backtest Suitability\n- Score: **{score:.1f}/100**\n")
