@@ -1,3 +1,5 @@
+OUT ?= year_report_$(YEAR).md
+CAL ?= calendar_$(YEAR).csv.gz
 PY=python
 
 run:
@@ -8,9 +10,7 @@ validate:
 
 build:
 	$(PY) core.py build --year $(YEAR) --infile $(INFILE) --outfile $(OUT)
-
-check:
-	$(PY) core.py check --year $(YEAR) --calendar $(CAL)
+check: build report
 
 report:
 	$(PY) core.py report --year $(YEAR) --calendar $(CAL) --outfile $(OUT)

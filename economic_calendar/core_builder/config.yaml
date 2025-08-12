@@ -130,62 +130,62 @@ importance_rules:
     - name: "US: ISM PMI — high"
       when:
         country: US
-        title_regex: "(?i)\bism\b.*\bpmi\b"
+        title_regex: '(?i)\bism\b.*\bpmi\b'
       set: high
 
     - name: "US: FOMC minutes/statement — medium"
       when:
         country: US
-        title_regex: "(?i)\bfomc\b.*(minutes|statement)"
+        title_regex: '(?i)\bfomc\b.*(minutes|statement)'
       set: medium
 
     - name: "US: FOMC press conference — high"
       when:
         country: US
-        title_regex: "(?i)\bfomc\b.*(press\s+conference|news\s+conference)"
+        title_regex: '(?i)\bfomc\b.*(press\s+conference|news\s+conference)'
       set: high
 
     - name: "US: FOMC unscheduled — high"
       when:
         country: US
-        title_regex: "(?i)\bfomc\b.*(unscheduled|intermeeting|emergency|out[-\s]of[-\s]schedule)"
+        title_regex: '(?i)\bfomc\b.*(unscheduled|intermeeting|emergency|out[-\s]of[-\s]schedule)'
       set: high
 
     - name: "ECB: rate decision — high"
       when:
-        title_regex: "(?i)\becb\b.*(rate|interest).*decision"
+        title_regex: '(?i)\becb\b.*(rate|interest).*decision'
       set: high
 
     - name: "ECB: press conference — high"
       when:
-        title_regex: "(?i)\becb\b.*press\s+conference"
+        title_regex: '(?i)\becb\b.*press\s+conference'
       set: high
 
     - name: "ECB: unscheduled — high"
       when:
-        title_regex: "(?i)\becb\b.*(unscheduled|extraordinary|emergency)"
+        title_regex: '(?i)\becb\b.*(unscheduled|extraordinary|emergency)'
       set: high
 
     - name: "EA: Unemployment Rate — high"
       when:
         country: EA
-        title_regex: "(?i)unemployment.*rate"
+        title_regex: '(?i)unemployment.*rate'
       set: high
 
     - name: "DE: Flash CPI — medium"
       when:
         country: DE
-        title_regex: "(?i)\bflash\b.*\bcpi\b"
+        title_regex: '(?i)\bflash\b.*\bcpi\b'
       set: medium
 
     - name: "UK: monetary policy — medium"
       when:
         country: UK
-        title_regex: "(?i)(rate\s+decision|bank\s+rate|policy\s+rate|monetary\s+policy|mpc\s+meeting)"
+        title_regex: '(?i)(rate\s+decision|bank\s+rate|policy\s+rate|monetary\s+policy|mpc\s+meeting)'
       set: medium
 
     - name: "CH: monetary policy — medium"
       when:
         country: CH
-        title_regex: "(?i)(rate\s+decision|policy\s+rate|monetary\s+policy|snb\s+policy|snb\s+meeting|snb\s+monetary\s+policy)"
+        title_regex: '(?i)(rate\s+decision|policy\s+rate|monetary\s+policy|snb\s+policy|snb\s+meeting|snb\s+monetary\s+policy)'
       set: medium
