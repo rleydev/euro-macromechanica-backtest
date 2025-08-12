@@ -1,164 +1,128 @@
+Economic Calendar 2001–2025 (до 31 июля 2025)
 
-# Economic Calendar 2001–2025 (until July 31, 2025)
+Проект собирает экономический календарь по годам (2001–2025, для 2025 — до 31 июля) из официальных источников и приоритезированных провайдеров. Выходной формат — компактный csv.gz с UTC-временем.
 
-The project compiles an economic calendar by year (2001–2025, for 2025 — until July 31) from official sources and prioritized providers.  
-The output format is a compact `csv.gz` file with UTC time.
+Что покрываем
 
----
+- Страны и регионы: США (US), Еврозона/EA (в т.ч. ключевые страны DE/FR/IT/ES), Великобритания (UK), Швейцария (CH).
+- Важность событий: берём только medium и high. Фильтр важности жёстко enforced в валидации.
+- Специальные правила важности:
+  - США:
+    - FOMC внеплановые — high; плановые — medium.
+    - FOMC minutes и statements — всегда medium.
+    - ISM PMI (Manufacturing/Services/Composite) — всегда high.
+  - ECB: решения по ставке — high; пресс-конференция после решения — high. Любые внеплановые события — high.
+  - Еврозона: Unemployment Rate — high.
+  - Германия: Flash CPI — medium.
+  - UK и CH: все ДКП-события — medium.
 
-## Coverage
+Источники и приоритет провайдеров
 
-- **Countries and regions:** United States (US), Euro Area/EA (incl. key countries DE/FR/IT/ES), United Kingdom (UK), Switzerland (CH).
-- **Event importance:** only `medium` and `high` are included. The importance filter is strictly enforced during validation.
-- **Special importance rules:**
-  - **US:**
-    - FOMC unscheduled — `high`; scheduled — `medium`.
-    - FOMC minutes and statements — always `medium`.
-    - ISM PMI (Manufacturing/Services/Composite) — always `high`.
-  - **ECB:** rate decisions — `high`; post-decision press conference — `high`. Any unscheduled events — `high`.
-  - **Euro Area:** Unemployment Rate — `high`.
-  - **Germany:** Flash CPI — `medium`.
-  - **UK and CH:** all monetary policy events — `medium`.
+Приоритет при сборе (--providers all):
+bls, bea, eurostat, ecb, ons, destatis, insee, istat, ine, ism, spglobal, snb, fso_seco, kof, procure_ch, census, fed_ip, confboard, umich, fomc
 
----
+Примечание: часть провайдеров может быть интегрирована как «заглушки» (интерфейс готов, наполнение поэтапно). В любом случае, приоритет и структура уже учтены в пайплайне.
 
-## Sources and Provider Priority
+Форматы данных
 
-Priority when collecting (`--providers all`):
+Входной CSV (manual_events.csv)
+Минимальный набор колонок (порядок не критичен):
+- date_local — YYYY-MM-DD (локальная дата релиза);
+- time_local — HH:MM (локальное время; можно пусто);
+- tz — IANA-таймзона (например, America/New_York, Europe/Zurich); если пусто — применяются правила по источникам или UTC.
+- country — US, EA, DE, FR, IT, ES, UK, CH;
+- importance — medium или high;
+- title — название события;
+- source_url — ссылка на первоисточник (желательно с доменом из official_domains в config.yaml);
+- опционально: ticker, notes, certainty.
 
-`bls, bea, eurostat, ecb, ons, destatis, insee, istat, ine, ism, spglobal, snb, fso_seco, kof, procure_ch, census, fed_ip, confboard, umich, fomc`
+Примечание (опциональные поля):
+- certainty:
+  - estimated — точного времени нет у первоисточника, время выставлено по правилу/эвристике;
+  - secondary — точное время взято из Reuters/Bloomberg (первичный сайт не дал время).
+  Пусто = есть подтверждённое время у первоисточника.
+- В notes можно указывать ручные оверрайды важности (опционально): impact_override=high|medium.
 
-**Note:** some providers may be integrated as “stubs” (interface ready, population in stages). In any case, priority and structure are already built into the pipeline.
+Выходной календарь (calendar_<year>.csv.gz)
+Строго следующие колонки:
+- обязательные: datetime_utc, event, country, impact
+- опциональные: certainty, ticker, source_url, notes
 
----
+Формат — csv.gz (gzip-сжатый CSV). Большинство аналитических инструментов читают *.csv.gz напрямую. Для просмотра в Excel можно распаковать:
+macOS/Linux: gunzip -c calendar_2001.csv.gz > calendar_2001.csv
+Windows (PowerShell): tar -xzf .\calendar_2001.csv.gz
 
-## Data Formats
+Конвертация времени в UTC
 
-### Input CSV (`manual_events.csv`)
-**Minimum columns** (order not critical):
-- `date_local` — YYYY-MM-DD (local release date)
-- `time_local` — HH:MM (local time; may be empty)
-- `tz` — IANA timezone (e.g., `America/New_York`, `Europe/Zurich`); if empty — apply source-specific rules or UTC.
-- `country` — US, EA, DE, FR, IT, ES, UK, CH
-- `importance` — `medium` or `high`
-- `title` — event name
-- `source_url` — link to primary source (preferably domain from `official_domains` in `config.yaml`)
-- Optional: `ticker`, `notes`, `certainty`
+- Используем IANA zoneinfo с учётом DST/«дыр» весеннего перевода часов.
+- Обрабатываем fold=0/1 и нестандартные случаи (не существующее локальное время в день смены времени): сдвигаем к ближайшему корректному моменту.
+- Если tz не указана и нет правила — по умолчанию считаем UTC (рекомендуется указывать tz).
+- Если время взято из Reuters/Bloomberg — помечаем certainty=secondary. Если выставлено по правилу — certainty=estimated.
 
-**Optional fields:**
-- `certainty`:
-  - `estimated` — no exact time from the primary source, time set via rule/heuristic
-  - `secondary` — exact time taken from Reuters/Bloomberg (primary site did not provide)
-  - Empty = confirmed time from the primary source.
-- `notes` may contain manual importance overrides: `impact_override=high|medium`
+Метрики в отчёте
 
----
+Backtest Suitability (интегральная оценка пригодности для бэктеста) = взвешенная сумма:
+- Authenticity — доля записей с официальными доменами/первичными источниками;
+- Timing — доля записей с подтверждённым первичным временем (без estimated/secondary).
 
-### Output Calendar (`calendar_<year>.csv.gz`)
-**Required columns:**
-- `datetime_utc`, `event`, `country`, `impact`
+Веса берутся из config.yaml → weights (по умолчанию 0.95 / 0.05). Coverage не используется.
 
-**Optional:**  
-`certainty`, `ticker`, `source_url`, `notes`
+Хэши, манифест и бандлы
 
-Format — `csv.gz` (gzip-compressed CSV).  
-Most analytical tools read `*.csv.gz` directly.  
-For Excel viewing, decompress:
-- **macOS/Linux:** `gunzip -c calendar_2001.csv.gz > calendar_2001.csv`
-- **Windows (PowerShell):** `tar -xzf .\calendar_2001.csv.gz`
+- manifest_<year>.json — SHA-256 всех артефактов за год (календарь, отчёт, state.json, config.yaml).
+- bundle_<year>.tar.gz — собранный «слепок» года для переноса/резервного копирования (календарь, отчёт, манифест, state.json, config.yaml).
+- state.json — состояние пайплайна: артефакты за год, updated_at и подписи входов:
+  - inputs.year_slice_sha256 — SHA-256 среза входа за год, вычисленного из **распарсенного CSV** (фильтр по столбцу `date_local` начинается с `${year}-`), устойчиво к перестановке колонок;
+  - inputs.config_sha256 — SHA-256 содержимого config.yaml.
 
----
+Hashes 101 — как проверить SHA-256 локально
 
-## UTC Time Conversion
+- Windows (CMD):  certutil -hashfile file.ext SHA256
+- Windows (PowerShell):  Get-FileHash .\file.ext -Algorithm SHA256
+- macOS/Linux:  shasum -a 256 file.ext  или  sha256sum file.ext
 
-- Uses IANA `zoneinfo` with DST and “spring forward” gaps handling.
-- Handles `fold=0/1` and non-existent local times (DST shift days) by adjusting to the nearest valid moment.
-- If `tz` is missing and no rule applies — default to UTC.
-- If time is from Reuters/Bloomberg — mark `certainty=secondary`.  
-- If time set via rules — `certainty=estimated`.
+Сверьте полученный хэш с manifest_<year>.json или с хэшем, указанным в отчёте.
 
----
+Команды
 
-## Metrics in Report
-
-**Backtest Suitability** = weighted sum:
-- **Authenticity** — share of records with official domains/primary sources
-- **Timing** — share of records with confirmed primary time (excluding `estimated`/`secondary`)
-
-Weights are from `config.yaml` → `weights` (default 0.95 / 0.05).  
-Coverage is not used.
-
----
-
-## Hashes, Manifest, and Bundles
-
-- `manifest_<year>.json` — SHA-256 of all artifacts for the year (calendar, report, `state.json`, `config.yaml`)
-- `bundle_<year>.tar.gz` — full year snapshot (calendar, report, manifest, `state.json`, `config.yaml`)
-- `state.json` — pipeline state: year artifacts, `updated_at` and input signatures:
-  - `inputs.year_slice_sha256` — SHA-256 of parsed CSV slice for the year (filtered by `date_local`), stable to column order.
-  - `inputs.config_sha256` — SHA-256 of `config.yaml` content.
-
-**Check SHA-256 locally:**
-- **Windows (CMD):** `certutil -hashfile file.ext SHA256`
-- **Windows (PowerShell):** `Get-FileHash .\file.ext -Algorithm SHA256`
-- **macOS/Linux:** `shasum -a 256 file.ext` or `sha256sum file.ext`
-
----
-
-## Commands
-
-### Quick start
-```bash
+Быстрый старт
 python -m venv .venv
 . .venv/bin/activate                # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-### Yearly run
-```bash
-# Dry run (no files written)
+Сбор по году
+# вначале можно «сухой прогон» (не пишет файлы)
 python core.py assemble --year 2001 --providers all --dry-run
-
-# Full run for the year
+# полноценный прогон за год
 python core.py run --year 2001 --bundle
-```
 
-**Separate stages:**
-```bash
+Доступны также отдельные стадии:
 python core.py validate --year 2001 --infile manual_events.csv
 python core.py build    --year 2001 --infile manual_events.csv --outfile calendar_2001.csv.gz
 python core.py report   --year 2001 --calendar calendar_2001.csv.gz
 python core.py bundle   --year 2001
-```
 
-**Parameters:**
-- `--providers` — choose subset of sources (`all` = by priority above)
-- `--cache-dir` — cache directory for providers
-- `--dry-run` — in `assemble`: collect everything in memory and show summary without writing
+Параметры:
+- --providers — выбрать подмножество источников (all — по приоритету выше);
+- --cache-dir — директория кэша для провайдеров;
+- --dry-run — в assemble: собрать всё в памяти и показать сводку без записи.
 
----
+Правила валидации
 
-## Validation Rules
+- Пропускаем только importance ∈ {medium, high} (любые low отсекаются).
+- Учёт ручных оверрайдов важности через notes: impact_override=... (если указан).
+- Если не удаётся установить точное время у первоисточника — certainty=estimated.
+- Если время из Reuters/Bloomberg — certainty=secondary.
 
-- Only `importance ∈ {medium, high}` (drop all `low`)
-- Respect manual overrides in `notes`: `impact_override=...`
-- If exact time from primary source is unavailable — `certainty=estimated`
-- If time is from Reuters/Bloomberg — `certainty=secondary`
+Сохранение прогресса и возобновление после обрыва
 
----
+- После каждой ключевой стадии обновляется state.json.
+- Манифест и отчёт пересчитываются «одним махом», чтобы не было рассинхрона.
+- Для возобновления в новой сессии достаточно загрузить сюда bundle_<year>.tar.gz (или артефакты по отдельности) — пайплайн пропустит уже сделанные шаги по хэшам и состоянию.
 
-## Resume After Interruption
+Конфигурация (config.yaml)
 
-- After each key stage, `state.json` is updated.
-- Manifest and report recalculated together to avoid desync.
-- To resume in a new session, just load `bundle_<year>.tar.gz` (or artifacts separately) — the pipeline will skip completed steps by hashes.
-
----
-
-## Configuration (`config.yaml`)
-
-Minimal valid config:
-```yaml
+Минимальный валидный конфиг:
 official_domains:
   domains:
     - federalreserve.gov
@@ -178,85 +142,126 @@ official_domains:
 weights:
   authenticity: 0.95
   timing: 0.05
-time_rules: {}
+time_rules: {}      # опционально, правила времени по событиям/источникам
+
+Окружение и воспроизводимость
+
+- Python 3.11 (или контейнер python:3.11-slim).
+- Пакеты закреплены версиями в requirements.txt (включая tzdata).
+- Dockerfile доступен для полностью воспроизводимого окружения.
+
+Частые вопросы
+
+Почему csv.gz?
+Компактнее, быстрее передаётся, нативно читается pandas/R/полезными утилитами.
+
+Можно ли загрузить только calendar_<year>.csv.gz и продолжить?
+Да — для отчёта/склейки годов этого достаточно. Но для пере-валидации/дозаполнения лучше иметь manual_events.csv и config.yaml (и/или bundle_<year>.tar.gz).
+
+С 2025 годом что?
+Собираем период с 1 января по 31 июля 2025 включительно.
+
+**Таймзоны и алиасы:** в `config.yaml` можно задать `tz_aliases` (например, `ET → America/New_York`, `CET → Europe/Berlin`). Если `tz` не указана или некорректна, используется fallback: UTC, а в stderr будет предупреждение.
+
+
+## Робастная обработка CSV
+- Автодетект кодировки: пробуем `utf-8`, `utf-8-sig`, `cp1251`, `latin-1`.
+- Нормализация заголовков: приводим к нижнему регистру и алиасы (`date→date_local`, `time→time_local`, `timezone→tz`, `event→title`, `impact→importance`, `url/source→source_url` и др.).
+- Проверка обязательных колонок и строк; записи с пустыми обязательными полями, неверной датой или `importance∉{medium,high}` — **отбрасываются**. 
+- Результат валидации: `validated_<year>.csv` (снимок строк, прошедших фильтры) и `validation_report_<year>.json` (сводка).
+- Сборка не падает на «кривом» CSV — невалидные строки исключаются, остальное собирается.
+
+
+## Репродюсируемые сборки (stable hashes)
+- Выходной `calendar_<year>.csv.gz` пишется с фиксированным `mtime=0` в заголовке gzip → одинаковый SHA-256 при одинаковом содержимом.
+- Бандл `bundle_<year>.tar.gz` создаётся с нормализованными метаданными (`uid/gid=0`, пустые `uname/gname`, `mtime=0` для файлов) → стабильный хэш архива.
+
+
+## Фильтр по году
+Во `validate` и `build` происходит жёсткий срез по полю `date_local` на указанный `--year`. Лишние годы отбрасываются и фиксируются в `validation_report_<year>.json` (`other_years`).
+
+### Обновления политики (актуально)
+- **Authenticity** трактуется как официальность источника: события с `certainty=estimated` из официальных доменов считаются **официальными** наравне с `confirmed`; `secondary` — это Reuters/Bloomberg и т.п.
+- **Backtest suitability** использует веса из `config.yaml` (`weights.authenticity_weight`, `weights.timing_weight`). Дефолты проекта сейчас: **0.95** и **0.05** соответственно.
+- **Exclusions (жёсткие исключения)** из `config.yaml` применяются **на стадиях `validate` и `build`**. События, попавшие под `titles_exact` или `weekly_series`, автоматически исключаются из пайплайна.
+
+
+
+_Прим.: По умолчанию веса для Backtest Suitability — authenticity: 0.95, timing: 0.05._
+
+## Логика «официальности» источника и auto-confirm
+
+**Официальный источник** в отчёте трактуется как объединение двух множеств:
+- `official_domains` — явный список (статведы и т.п., см. `config.yaml`).
+- `gov_like_patterns` — паттерны доменов центробанков (Fed/FRB, ECB, Bundesbank, Banque de France, Banca d’Italia, Banco de España, SNB, BoE).
+
+Правила в отчёте (Authenticity):
+- `secondary` — неофициально.
+- `confirmed` — официально.
+- `estimated` или пусто — официально **только если** домен ∈ (`official_domains` ∪ `gov_like_patterns`).
+
+Правила повышения до `confirmed` в сборке (stage_build):
+- Если домен ∈ (`official_domains` ∪ `gov_like_patterns`), **и** таймзона валидна, **и** задано точное `time_local` — тогда `'' | estimated → confirmed`.
+- Если таймзона невалидна/пустая — запись помечается `estimated` и в `notes` добавляется `tz_fallback=utc` (повышения нет).
+
+### Как присваивается важность (через `config.yaml`)
+
+Начиная с этой версии, правила важности настраиваются в `config.yaml` в секции `importance_rules`.
+Пайплайн автоматически:
+1) читает ручной оверрайд из `notes` по ключу `impact_override` (например: `impact_override=high`),  
+2) применяет правила по стране и шаблонам заголовка (первое совпадение выигрывает),  
+3) оставляет только значения из `include_impacts` (по умолчанию: `high`, `medium`).
+
+Минимальный пример блока в `config.yaml`:
+
+```yaml
+importance_rules:
+  notes_override_key: "impact_override"
+  items:
+    - name: "US: ISM PMI — high"
+      when: { country: US, title_regex: "(?i)\\bism\\b.*\\bpmi\\b" }
+      set: high
+
+    - name: "US: FOMC minutes/statement — medium"
+      when: { country: US, title_regex: "(?i)\\bfomc\\b.*(minutes|statement)" }
+      set: medium
+
+    - name: "US: FOMC press conference — high"
+      when: { country: US, title_regex: "(?i)\\bfomc\\b.*(press\\s+conference|news\\s+conference)" }
+      set: high
+
+    - name: "US: FOMC unscheduled — high"
+      when: { country: US, title_regex: "(?i)\\bfomc\\b.*(unscheduled|intermeeting|emergency|out[-\\s]of[-\\s]schedule)" }
+      set: high
+
+    - name: "ECB: rate decision — high"
+      when: { title_regex: "(?i)\\becb\\b.*(rate|interest).*decision" }
+      set: high
+
+    - name: "ECB: press conference — high"
+      when: { title_regex: "(?i)\\becb\\b.*press\\s+conference" }
+      set: high
+
+    - name: "ECB: unscheduled — high"
+      when: { title_regex: "(?i)\\becb\\b.*(unscheduled|extraordinary|emergency)" }
+      set: high
+
+    - name: "EA: Unemployment Rate — high"
+      when: { country: EA, title_regex: "(?i)unemployment.*rate" }
+      set: high
+
+    - name: "DE: Flash CPI — medium"
+      when: { country: DE, title_regex: "(?i)\\bflash\\b.*\\bcpi\\b" }
+      set: medium
+
+    - name: "UK: monetary policy — medium"
+      when: { country: UK, title_regex: "(?i)(rate\\s+decision|bank\\s+rate|policy\\s+rate|monetary\\s+policy|mpc\\s+meeting)" }
+      set: medium
+
+    - name: "CH: monetary policy — medium"
+      when: { country: CH, title_regex: "(?i)(rate\\s+decision|policy\\s+rate|monetary\\s+policy|snb\\s+policy|snb\\s+meeting|snb\\s+monetary\\s+policy)" }
+      set: medium
 ```
 
----
-
-## Environment & Reproducibility
-
-- Python 3.11 (or `python:3.11-slim` container)
-- Packages pinned in `requirements.txt` (incl. `tzdata`)
-- Dockerfile for fully reproducible environment
-
----
-
-## FAQ
-
-**Why `csv.gz`?**  
-Smaller, faster to transfer, natively read by pandas/R/CLI tools.
-
-**Can I load only `calendar_<year>.csv.gz` and continue?**  
-Yes — for reporting/merging years.  
-For re-validation/filling, better to have `manual_events.csv` and `config.yaml` (or `bundle_<year>.tar.gz`).
-
-**What about 2025?**  
-Covers Jan 1 — Jul 31, 2025.
-
----
-
-## Timezones and Aliases
-In `config.yaml` you can set `tz_aliases` (e.g., `ET → America/New_York`, `CET → Europe/Berlin`).  
-If `tz` is missing/invalid, UTC is used with a warning to `stderr`.
-
----
-
-## Robust CSV Handling
-
-- Auto-detect encoding: try `utf-8`, `utf-8-sig`, `cp1251`, `latin-1`
-- Normalize headers: lowercase + aliases (`date→date_local`, `time→time_local`, `timezone→tz`, `event→title`, `impact→importance`, `url/source→source_url`, etc.)
-- Validate required columns/rows; drop invalid date or `importance∉{medium,high}`
-- Output: `validated_<year>.csv` (filtered snapshot) and `validation_report_<year>.json` (summary)
-- Won’t crash on “broken” CSV — invalid rows are dropped, rest is processed
-
----
-
-## Stable Builds (Stable Hashes)
-
-- `calendar_<year>.csv.gz` written with fixed `mtime=0` in gzip header → identical SHA-256 for same content
-- `bundle_<year>.tar.gz` created with normalized metadata (`uid/gid=0`, empty `uname/gname`, `mtime=0`) → stable archive hash
-
----
-
-## Year Filtering
-
-In `validate` and `build`, a strict filter is applied on `date_local` for the given `--year`.  
-Extra years are dropped and recorded in `validation_report_<year>.json` (`other_years`).
-
----
-
-## Policy Updates
-
-- **Authenticity** = official source:  
-  events with `certainty=estimated` from official domains are considered **official** same as `confirmed`;  
-  `secondary` = Reuters/Bloomberg, etc.
-- **Backtest suitability** uses weights from `config.yaml` (`weights.authenticity_weight`, `weights.timing_weight`). Default: **0.95** and **0.05**.
-- **Exclusions** from `config.yaml` are applied at `validate` and `build` stages.  
-  Events matching `titles_exact` or `weekly_series` are automatically excluded.
-
----
-
-## Official Source Logic & Auto-Confirm
-
-**Official source** = union of:
-- `official_domains` — explicit list (stat agencies, etc.)
-- `gov_like_patterns` — patterns for central bank domains (Fed/FRB, ECB, Bundesbank, Banque de France, Banca d’Italia, Banco de España, SNB, BoE)
-
-**Report rules (Authenticity):**
-- `secondary` — unofficial
-- `confirmed` — official
-- `estimated` or empty — official **only if** domain ∈ (`official_domains` ∪ `gov_like_patterns`)
-
-**Promotion to `confirmed` in build stage:**
-- If domain ∈ (`official_domains` ∪ `gov_like_patterns`) **and** valid timezone **and** exact `time_local` — then `'' | estimated → confirmed`
-- If timezone invalid/missing — marked `estimated` and `tz_fallback=utc` is added to `notes` (no promotion)
+> Примечание: порядок правил важен — применяется первое совпадение.  
+> Для тонкой настройки можно добавлять свои элементы в `items` без правки кода.

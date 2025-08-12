@@ -370,10 +370,82 @@ def _apply_exclusions(df: pd.DataFrame) -> pd.DataFrame:
         print(f"[exclusions] dropped {dropped} rows")
     return df.loc[~mask].copy()
 
+
+def _compile_importance_rules(cfg: dict) -> list[dict]:
+    """
+    Read importance_rules from config.yaml and return a list of compiled items:
+    each item is {'country': 'US'|'EA'|..., 'title_regex': compiled regex or None, 'set': 'high'|'medium'}.
+    """
+    items = []
+    try:
+        rules = (cfg or {}).get("importance_rules", {}) or {}
+        raw_items = rules.get("items") or []
+        for it in raw_items:
+            if not isinstance(it, dict):
+                continue
+            country = str((it.get("when") or {}).get("country","")).strip().upper()
+            title_rx = (it.get("when") or {}).get("title_regex")
+            set_to = str(it.get("set","")).strip().lower()
+            if not set_to:
+                continue
+            cre = None
+            if title_rx:
+                try:
+                    cre = re.compile(title_rx, re.I)
+                except Exception:
+                    cre = None
+            items.append({"country": country, "title_re": cre, "set": set_to})
+    except Exception:
+        pass
+    return items
+
+def _apply_importance_rules(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    1) honor notes override like 'impact_override=high' (key is configurable via config.yaml)
+    2) apply rule list from config.yaml.importance_rules.items in order
+    3) clamp to allowed values from config.include_impacts (default {'high','medium'})
+    """
+    cfg = load_config_dict()
+    notes_key = str(((cfg.get("importance_rules") or {}).get("notes_override_key")) or "impact_override").strip()
+    allowed = set((cfg.get("include_impacts") or ["high","medium"]))
+    rules = _compile_importance_rules(cfg)
+
+    def derive(row):
+        imp = str(row.get("importance","")).strip().lower()
+        title = str(row.get("title","")).strip()
+        cc = str(row.get("country","")).strip().upper()
+        notes = str(row.get("notes",""))
+
+        # 1) notes override: key=value anywhere in notes
+        if notes_key:
+            m = re.search(rf'{re.escape(notes_key)}\s*=\s*(high|medium)', notes, re.I)
+            if m:
+                return m.group(1).lower()
+
+        # 2) rules: first match wins
+        for it in rules:
+            if it.get("country") and it["country"] != cc:
+                continue
+            rx = it.get("title_re")
+            if rx is not None and not rx.search(title):
+                continue
+            # match!
+            return it.get("set","").lower() or imp
+
+        return imp
+
+    df = df.copy()
+    df["importance"] = df.apply(derive, axis=1).astype(str).str.strip().str.lower()
+    # clamp to allowed
+    df["importance"] = df["importance"].where(df["importance"].isin(allowed), next(iter(allowed)))
+    return df
+
+
 def stage_validate(year:int, infile:Path):
     df, enc = _read_csv_with_fallback(infile)
     df = _normalize_headers(df)
     df, required, optional = _ensure_columns(df)
+    df = _apply_importance_rules(df)
     df, stats = _drop_invalid_rows(df, required)
     mask_year = df['date_local'].astype(str).str.startswith(f"{year}-")
     df = df.loc[mask_year].copy()
@@ -415,6 +487,7 @@ def stage_build(year:int, infile:Path, outfile:Path):
     df, enc = _read_csv_with_fallback(infile)
     df = _normalize_headers(df)
     df, required, optional = _ensure_columns(df)
+    df = _apply_importance_rules(df)
     df, _ = _drop_invalid_rows(df, required)
     df = df[df['date_local'].astype(str).str.startswith(f"{year}-")].copy()
     if year == 2025:
