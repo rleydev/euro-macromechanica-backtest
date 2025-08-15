@@ -1,0 +1,82 @@
+min_gap_seconds: 60
+gap_buckets:
+  micro_min_sec: 120
+  micro_max_sec: 300
+  medium_min_sec: 360
+  medium_max_sec: 3600
+  large_min_sec: 3601
+news_window_te:
+  high:
+    pre_sec: 120
+    post_sec: 240
+  medium:
+    pre_sec: 60
+    post_sec: 120
+  low:
+    pre_sec: 30
+    post_sec: 60
+  precision_hour_extra_min: 15
+cme_ebs_defaults:
+  cme:
+    tz: America/Chicago
+  ebs:
+    tz: Europe/London
+  match_rule:
+    overlap_pct_threshold: 0.5
+    centerpoint_inside: true
+  repeatability_confirm_weeks: 8
+  conflict_priority:
+    tech_wins_pct: 0.7
+    high_news_early_win_sec: 60
+dst_timezones:
+- America/New_York
+- Europe/London
+- Europe/Zurich
+new_year:
+  window_utc:
+    start: 12-31 00:00
+    end: 01-01 23:59
+  weekend_median_tolerance_min: 90
+quality:
+  glitch_k_range: 30
+ingest:
+  volume_mode: auto
+dedup:
+  strategy: first_seen
+time:
+  interval_semantics: '[t,t+60s)'
+artifacts:
+  deterministic_gzip: true
+reporting:
+  hide_volume_charts_if_all_zero: true
+  analysis_ts_mode: content_max_ts
+  strict_font: true
+  language: en
+calendar:
+  source: local_csv
+  dedup_within_hour: true
+  collapse_series: true
+news_matching:
+  coarse_windows:
+    H:
+    - 30
+    - 60
+    M:
+    - 20
+    - 40
+    L:
+    - 10
+    - 30
+  default_hour_precision_minutes: 15
+warnings:
+  resampling_suspect_counter: true
+  robust_glitch_flag: true
+classification:
+  cascade:
+  - weekend
+  - us_holiday
+  - tech_cme_ebs
+  - news_calendar
+  - anomaly
+world_events:
+  enabled: false
