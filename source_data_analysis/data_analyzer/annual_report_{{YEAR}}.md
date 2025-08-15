@@ -32,7 +32,6 @@
 ## 7) Visualizations
 {{visuals_list_md}}
 
-\1
 ## Scorecard (0–100)
 {{scorecard_md}}
 
