@@ -161,3 +161,223 @@ def build_quarterly_context(df: pd.DataFrame, gaps: pd.DataFrame, year: int, q: 
     gq  = gaps[maskg].copy()
     common = build_common_blocks(dfq if not dfq.empty else df, gq if not gq.empty else gaps, year)
     return common
+
+
+def compute_score(df: pd.DataFrame, gaps: pd.DataFrame, year: int, params: dict | None = None) -> dict:
+    """Return a 0–100 score with transparent breakdown using deterministic rules."""
+    if params is None:
+        params = {
+            "weights": {
+                "gap_mix": 0.30, "hotspots": 0.20, "extremes": 0.15,
+                "monthly": 0.15, "sessions": 0.10, "calendar": 0.05, "completeness": 0.05
+            },
+            "targets": {
+                "small_share": 0.40, "long_share": 0.20,
+                "extreme_rate_per_10k": 0.5,
+                "monthly_cv": 1.0,
+                "session_other": 0.10,
+                "longest_gap_hours_ok": 24.0
+            }
+        }
+    W = params["weights"]; T = params["targets"]
+
+    N = len(gaps)
+    if N>0:
+        s = gaps["delta_sec"]
+        n_small = int(((s>60)&(s<=300)).sum())
+        n_med   = int(((s>300)&(s<=3600)).sum())
+        n_long  = int((s>3600).sum())
+        p_small = n_small/N; p_med = n_med/N; p_long = n_long/N
+    else:
+        p_small = p_med = p_long = 0.0
+
+    # Gap mix (higher small_share, lower long_share)
+    comp_small = min(1.0, p_small / T["small_share"])
+    comp_long  = max(0.0, 1.0 - min(1.0, p_long / T["long_share"]))
+    gap_mix_score = 100.0*(0.6*comp_small + 0.4*comp_long)
+
+    # Hotspots (weekday x hour) via normalized Herfindahl
+    if N>0:
+        cells = gaps.assign(wd=gaps["gap_start"].dt.weekday, hr=gaps["gap_start"].dt.hour).groupby(["wd","hr"]).size()
+        total = cells.sum()
+        p = (cells/total).values
+        H = float(np.sum(p*p))
+        C = int(len(cells))
+        normH = (H - 1.0/C) / (1.0 - 1.0/C) if C>1 else 1.0
+        hotspot_score = 100.0*(1.0 - normH)
+    else:
+        hotspot_score = 100.0
+
+    # Extreme candles (range > 5*P99(range)) per 10k bars
+    df2 = df.copy()
+    df2["range"] = (df2["high"]-df2["low"]).abs()
+    p99r = float(df2["range"].quantile(0.99)) if len(df2) else 0.0
+    ext = int((df2["range"] > 5*p99r).sum()) if p99r>0 else 0
+    rate_per_10k = ext / (len(df2)/10000.0) if len(df2) else 0.0
+    extreme_score = 100.0*(1.0 - min(1.0, rate_per_10k / T["extreme_rate_per_10k"]))
+
+    # Monthly stability (CV of monthly gap counts)
+    if len(df2):
+        df2["Month"] = df2["datetime_utc"].dt.to_period("M").astype(str)
+        if N>0:
+            gaps2 = gaps.copy(); gaps2["Month"] = gaps2["gap_start"].dt.to_period("M").astype(str)
+            monthly = (gaps2.groupby("Month").size()).reindex(sorted(df2["Month"].unique()), fill_value=0)
+        else:
+            monthly = pd.Series([0]*len(df2["Month"].unique()), index=sorted(df2["Month"].unique()))
+        mu = float(monthly.mean())
+        cv = float((monthly.std(ddof=0)/mu)) if mu>0 else 0.0
+    else:
+        cv = 0.0
+    monthly_score = 100.0*(1.0 - min(1.0, cv / T["monthly_cv"]))
+
+    # Session balance (penalize 'Other')
+    if N>0:
+        def _sess(ts):
+            h = ts.hour + ts.minute/60.0
+            asia = (0 <= h < 8); london = (7 <= h < 16); ny = (12 <= h < 21)
+            if asia and london: return "Asia-London overlap"
+            if london and ny:  return "London-NY overlap"
+            if ny: return "NY"
+            if london: return "London"
+            if asia: return "Asia"
+            return "Other"
+        sc = gaps["gap_start"].apply(_sess).value_counts()
+        share_other = float(sc.get("Other", 0)/N)
+    else:
+        share_other = 0.0
+    session_score = 100.0*(1.0 - min(1.0, share_other / T["session_other"]))
+
+    # Calendar coverage (not available → keep as 0 unless wired later)
+    calendar_score = 0.0
+
+    # Completeness (longest gap vs 24h)
+    longest_h = float(gaps["delta_sec"].max()/3600.0) if N>0 else 0.0
+    completeness_score = 100.0*(1.0 - min(1.0, longest_h / T["longest_gap_hours_ok"]))
+
+    # Weighted sum
+    total = (W["gap_mix"]*gap_mix_score +
+             W["hotspots"]*hotspot_score +
+             W["extremes"]*extreme_score +
+             W["monthly"]*monthly_score +
+             W["sessions"]*session_score +
+             W["calendar"]*calendar_score +
+             W["completeness"]*completeness_score)
+
+    breakdown = {
+        "gap_mix": gap_mix_score,
+        "hotspots": hotspot_score,
+        "extremes": extreme_score,
+        "monthly": monthly_score,
+        "sessions": session_score,
+        "calendar": calendar_score,
+        "completeness": completeness_score,
+    }
+    return {"total": float(total*100.0/100.0), "breakdown": breakdown}
+
+# Patch build_common_blocks to embed score into assessment_md
+_old_bcb = build_common_blocks
+def build_common_blocks(df: pd.DataFrame, gaps: pd.DataFrame, year: int) -> dict:
+    blocks = _old_bcb(df, gaps, year)
+    sc = compute_score(df, gaps, year)
+    br = sc["breakdown"]
+    score_line = f"**Score (0–100): {sc['total']:.1f}**"
+    breakdown_md = (
+        f"- Gap mix: {br['gap_mix']:.1f}\n"
+        f"- Hotspots: {br['hotspots']:.1f}\n"
+        f"- Extremes: {br['extremes']:.1f}\n"
+        f"- Monthly stability: {br['monthly']:.1f}\n"
+        f"- Sessions: {br['sessions']:.1f}\n"
+        f"- Calendar: {br['calendar']:.1f}\n"
+        f"- Completeness: {br['completeness']:.1f}"
+    )
+    # extend assessment_md
+    extra = f"\n\n{score_line}\n\nBreakdown:\n{breakdown_md}\n"
+    blocks["assessment_md"] = blocks.get("assessment_md", "") + extra
+    return blocks
+
+# --- Inject scorecard into assessment + expose scorecard_md ---
+_old_build_common_blocks = build_common_blocks
+def build_common_blocks(df: pd.DataFrame, gaps: pd.DataFrame, year: int) -> Dict[str,str]:
+    blocks = _old_build_common_blocks(df, gaps, year)
+    # try to read scoring from config
+    params = None
+    try:
+        cfg_txt = Path("/mnt/data/project_config.yml").read_text(encoding="utf-8", errors="ignore")
+        params = _merge_scoring_params(_parse_yaml_scoring(cfg_txt))
+    except Exception:
+        params = _default_scoring_params()
+    sc = compute_score(df, gaps, year, params)
+    br = sc["breakdown"]; W = sc["params"]["weights"]
+    score_line = f"**Score (0–100): {sc['total']:.1f}**"
+    breakdown_md = "| Component | Weight | Score |\n|---|---:|---:|\n" + "\n".join([
+        f"| Gap mix | {W['gap_mix']:.2f} | {br['gap_mix']:.1f} |",
+        f"| Hotspots | {W['hotspots']:.2f} | {br['hotspots']:.1f} |",
+        f"| Extremes | {W['extremes']:.2f} | {br['extremes']:.1f} |",
+        f"| Monthly stability | {W['monthly']:.2f} | {br['monthly']:.1f} |",
+        f"| Sessions | {W['sessions']:.2f} | {br['sessions']:.1f} |",
+        f"| Calendar | {W['calendar']:.2f} | {br['calendar']:.1f} |",
+        f"| Completeness | {W['completeness']:.2f} | {br['completeness']:.1f} |",
+    ])
+    blocks["assessment_md"] = blocks.get("assessment_md","") + f"\n\n{score_line}\n"
+    blocks["scorecard_md"] = f"{score_line}\n\n{breakdown_md}"
+    return blocks
+
+# === Scoring config support ===
+from pathlib import Path
+
+def _default_scoring_params():
+    return {
+        "weights": {
+            "gap_mix": 0.30, "hotspots": 0.20, "extremes": 0.15,
+            "monthly": 0.15, "sessions": 0.10, "calendar": 0.05, "completeness": 0.05
+        },
+        "targets": {
+            "small_share": 0.40, "long_share": 0.20,
+            "extreme_rate_per_10k": 0.5,
+            "monthly_cv": 1.0,
+            "session_other": 0.10,
+            "longest_gap_hours_ok": 24.0
+        }
+    }
+
+def _parse_yaml_scoring(cfg_text: str) -> dict | None:
+    """Minimal YAML reader for scoring.{weights,targets} with numeric values only."""
+    lines = cfg_text.splitlines()
+    i = 0
+    found = False
+    block = []
+    while i < len(lines):
+        if re.match(r'^\s*scoring\s*:', lines[i]):
+            found = True
+            i += 1
+            # capture until next top-level key (no leading spaces)
+            while i < len(lines) and (lines[i].strip()=='' or lines[i].startswith(' ') or lines[i].startswith('\t')):
+                block.append(lines[i])
+                i += 1
+            break
+        i += 1
+    if not found:
+        return None
+    params = {"weights": {}, "targets": {}}
+    mode = None
+    for ln in block:
+        if re.search(r'\bweights\s*:', ln):
+            mode = "weights"; continue
+        if re.search(r'\btargets\s*:', ln):
+            mode = "targets"; continue
+        m = re.match(r'^\s+([A-Za-z0-9_]+)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*$', ln)
+        if m and mode in ("weights","targets"):
+            key = m.group(1); val = float(m.group(2))
+            params[mode][key] = val
+    return params
+
+def _merge_scoring_params(custom: dict | None) -> dict:
+    base = _default_scoring_params()
+    if not custom:
+        return base
+    for k in ("weights","targets"):
+        if k in custom and isinstance(custom[k], dict):
+            for kk, vv in custom[k].items():
+                if kk in base[k]:
+                    base[k][kk] = float(vv)
+    return base

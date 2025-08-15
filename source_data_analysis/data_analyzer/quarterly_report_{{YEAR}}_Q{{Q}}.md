@@ -12,6 +12,9 @@
 ## Monthly breakdown (inside quarter)
 {{monthly_table_md}}
 
+## Scorecard (0–100)
+{{scorecard_md}}
+
 ---
 Transparency footer
 — Manifest SHA-256: {{MANIFEST_SHA256}}

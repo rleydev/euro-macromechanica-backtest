@@ -32,8 +32,10 @@
 ## 7) Visualizations
 {{visuals_list_md}}
 
-## 8) Final assessment of the year
-{{assessment_md}}
+\1
+## Scorecard (0–100)
+{{scorecard_md}}
+
 
 ## 9) Full list of ❗ anomalies
 {{gaps_pointer_md}}

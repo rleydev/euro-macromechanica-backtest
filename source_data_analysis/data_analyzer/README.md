@@ -142,3 +142,11 @@ Charts/plots are saved as **SVG** using deterministic settings (fixed `svg.hashs
 4) Pack heavy artifacts with `helpers.make_tar_gz_deterministic(...)` for bit-for-bit reproducibility.
 
 Templates now contain explicit placeholders like `{{durations_section_md}}`, `{{sessions_table_md}}` etc. Any unresolved `{{...}}` will raise.
+
+
+## Scoring model (0–100)
+- Конфигурируется через `project_config.yml` → секция `scoring:` (weights/targets).
+- Подсчёт идёт в `sections.py: compute_score(...)` и автоматически попадает в годовой отчёт:
+  - **Score (0–100)** в разделе *Final assessment*
+  - полный **Scorecard** (таблица) в отдельной секции отчёта.
+- Все вычисления детерминированы, не требуют внешних данных.
