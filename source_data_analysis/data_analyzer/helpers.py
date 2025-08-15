@@ -69,3 +69,32 @@ def write_svgz_deterministic(svg_bytes: bytes, dst_path: str) -> None:
         gz.write(svg_bytes)
     with open(dst_path, "wb") as f:
         f.write(buf.getvalue())
+
+
+# --- Time window helpers (UTC) for deterministic slicing ---
+def quarter_bounds(year: int, q: int):
+    """Return (start_utc, end_utc) for quarter q in year, as ISO8601 strings."""
+    import datetime as _dt, pytz as _tz
+    if q not in (1,2,3,4):
+        raise ValueError("q must be 1..4")
+    start_month = 3*(q-1) + 1
+    end_year = year + (1 if q==4 else 0)
+    end_month = 1 if q==4 else start_month + 3
+    tz = _tz.UTC
+    start = _dt.datetime(year, start_month, 1, 0, 0, 0, tzinfo=tz)
+    end = _dt.datetime(end_year, end_month, 1, 0, 0, 0, tzinfo=tz)
+    return start, end
+
+def month_bounds(year: int, month: int):
+    """Return (start_utc, end_utc) for month in year, as ISO8601 strings."""
+    import datetime as _dt, pytz as _tz, calendar as _cal
+    if not (1 <= month <= 12):
+        raise ValueError("month must be 1..12")
+    tz = _tz.UTC
+    last_day = _cal.monthrange(year, month)[1]
+    start = _dt.datetime(year, month, 1, 0, 0, 0, tzinfo=tz)
+    if month == 12:
+        end = _dt.datetime(year+1, 1, 1, 0, 0, 0, tzinfo=tz)
+    else:
+        end = _dt.datetime(year, month+1, 1, 0, 0, 0, tzinfo=tz)
+    return start, end
