@@ -7,7 +7,6 @@
 *.txt       text eol=lf
 *.csv       text eol=lf
 *.json      text eol=lf
-*.py        text eol=lf
 *.ini       text eol=lf
 *.cfg       text eol=lf
 *.tmpl      text eol=lf
@@ -20,6 +19,7 @@ Makefile    text eol=lf
 *.csv.gz    binary
 *.sha256    binary
 *.sig       binary
+*.asc       binary
 *.ots       binary
 *.zip       binary
 *.tar       binary
