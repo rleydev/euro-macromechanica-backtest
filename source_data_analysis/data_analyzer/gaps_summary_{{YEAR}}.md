@@ -1,14 +1,19 @@
 # EURUSD 1m — Gap Summary {{YEAR}}
 
-**Classification (>1 min)**  
-Total: {{gaps_total}}; 📆 {{wk_cnt}}, 🎉 {{hol_cnt}}, 📢 {{news_cnt}}, ⚙️ {{tech_cnt}}, ❗ {{anom_cnt}}.  
-Economic calendar coverage: {{te_coverage}} (High={{te_high}}).
-
-**Durations**  
-2–5 min / 6–60 min / >60 min — distribution + tails.
+## Inputs used (hashes)
+- DAT_ASCII CSV: {{INPUT_CSV_SHA256}}
+- HistData TXT: {{INPUT_TXT_SHA256}}
+- Calendar CSV: {{CALENDAR_CSV_SHA256}}
+- Defaults SHA-256: {{DEFAULTS_SHA256}}
+- RUN_ID: {{RUN_ID}}
 
 **Sessions (UTC)**  
-Asia / London / NY; overlaps.
+{{sessions_table_md}}
 
-**Anomalies (❗)**  
-Full list attached below.
+**Anomalies (❗) — full list**  
+{{gaps_full_table_md}}
+
+---
+Transparency footer
+— Manifest SHA-256: {{MANIFEST_SHA256}}
+— Report generated with the help of ChatGPT ({{model_name}}).

@@ -46,7 +46,7 @@
 ## 7. Отчёты и артефакты
 - `reports/annual_report_{YEAR}.md` — 10 разделов (без «мировых событий»)
 - `reports/gaps_summary_{YEAR}.md`
-- `reports/EURUSD_{YEAR}_anomalies.png` — только ❗ аномалии
+- `reports/EURUSD_{YEAR}_anomalies.svg` — только ❗ аномалии
 - (2025) `quarterly_report_2025_Q*.md`, `monthly_summary_2025-07.md`
 
 ## 8. Манифест и воспроизводимость
@@ -91,7 +91,7 @@
 - Дет. gzip (mtime=0)
 
 ## F. Отчёты
-- Годовой: 10 разделов (без «мировых событий»), PNG с ❗
+- Годовой: 10 разделов (без «мировых событий»), SVG с ❗
 - Квартальные/месячные — без упоминаний «мировых событий»
 
 ## G. Манифест
@@ -107,7 +107,7 @@
 
 ## Notes
 - Flat layout: all files in one directory.
-- Determinism: use `helpers.py` for gzip/PNG and content-based `analysis_utc_ts`.
+- Determinism: use `helpers.py` for gzip/SVG and content-based `analysis_utc_ts`.
 
 
 ## Strict slicing по периоду `[start, end)`
@@ -125,3 +125,20 @@ start, end = quarter_bounds(YEAR, Q)        # [start, end)
 mstart, mend = month_bounds(2025, 7)        # [2025-07-01, 2025-08-01)
 ```
 
+
+### Vector outputs (SVG) for bit-for-bit reproducibility
+Charts/plots are saved as **SVG** using deterministic settings (fixed `svg.hashsalt`, `svg.fonttype='none'`, `path.simplify=False`, no tight bbox). If you need compressed vector files, use `.svgz` via deterministic gzip (`mtime=0`, empty filename). See helpers: `save_svg_deterministic`, `write_svgz_deterministic`.
+
+
+## Patched rendering flow (strict)
+
+1) Compute `df` and `gaps`.
+2) Build context via `sections.py`:
+   - `build_common_blocks(df, gaps, year)`
+   - `build_gaps_context(df, gaps, year)`
+   - `build_monthly_context(df, gaps, year, "YYYY-MM")`
+   - `build_quarterly_context(df, gaps, year, Q)`
+3) Render with `helpers.render_template_file_strict(...)`.
+4) Pack heavy artifacts with `helpers.make_tar_gz_deterministic(...)` for bit-for-bit reproducibility.
+
+Templates now contain explicit placeholders like `{{durations_section_md}}`, `{{sessions_table_md}}` etc. Any unresolved `{{...}}` will raise.

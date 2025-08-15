@@ -1,51 +1,47 @@
 # EURUSD 1m — Annual Report {{YEAR}}
 
+## Inputs used (hashes)
+- DAT_ASCII CSV: {{INPUT_CSV_SHA256}}
+- HistData TXT: {{INPUT_TXT_SHA256}}
+- Calendar CSV: {{CALENDAR_CSV_SHA256}}
+- Defaults SHA-256: {{DEFAULTS_SHA256}}
+- RUN_ID: {{RUN_ID}}
+
 **Input files (names + SHA-256):**
 {{inputs_table_md}}
 
 ---
-
 ## 1) Gap classification (>1 min)
-Total: {{gaps_total}}; 📆 {{wk_cnt}}, 🎉 {{hol_cnt}}, 📢 {{news_cnt}}, ⚙️ {{tech_cnt}}, ❗ {{anom_cnt}}.  
-Economic calendar coverage: {{te_coverage}} (High={{te_high}}).
+{{gap_classification_md}}
 
 ## 2) Durations (micro/medium/large)
-Distribution table and comments on tails.
+{{durations_section_md}}
 
 ## 3) Sessions (UTC)
-Distribution across Asia/London/NY and their overlaps.
+{{sessions_table_md}}
 
 ## 4) Monthly statistics
-Tables/plots by month.
+{{monthly_table_md}}
 
 ## 5) Extreme candles
-TOP-5 by range (timestamp, range, direction).  
-Mark possible data-glitches, if any.
+{{extreme_table_md}}
 
 ## 6) Cross-check with CME/EBS maintenance windows
-Matches/exceptions, conclusions; weekly repeatability.
+{{maintenance_table_md}}
 
 ## 7) Visualizations
-Gap heatmap; monthly counts chart.
+{{visuals_list_md}}
 
 ## 8) Final assessment of the year
-Backtest suitability, risks/quirks.
+{{assessment_md}}
 
 ## 9) Full list of ❗ anomalies
-Timestamps and durations (complete list).
+{{gaps_pointer_md}}
 
-## 10) PNG with ❗ anomalies
-File: `EURUSD_{{YEAR}}_anomalies.png` (red markers).
+## 10) SVG with ❗ anomalies
+{{svg_pointer_md}}
 
 ---
-
-## Transparency footer
-- Goal: make the backtest dataset as transparent as possible.  
-- Deterministic analysis stamp (UTC): `{{analysis_utc_ts}}` (content-based: max(datetime_utc) from input CSVs).  
-- Algorithm ID/version, language and libraries: {{algo_id}} / {{algo_version}}; Python + pandas + matplotlib.  
-- Defaults/config and its hash: {{config_hash}}.  
-- Economic calendar coverage (year): {{te_coverage}} (High={{te_high}}).  
-- SHA-256 of all inputs/outputs/artifacts and the MANIFEST HASH: {{artifacts_hash_summary}}.  
-- Run environment (UTC timestamp): {{run_env_info}}.  
-- Authorship note: “Report/analysis prepared with the assistance of ChatGPT ({{model_name}})”.  
-- References/IDs and SHA-256 of the “full logic code” and “logic description” (if provided).
+Transparency footer
+— Manifest SHA-256: {{MANIFEST_SHA256}}
+— Report generated with the help of ChatGPT ({{model_name}}).

@@ -80,3 +80,45 @@ classification:
   - anomaly
 world_events:
   enabled: false
+
+
+# --- PATCH: reproducibility.svg (bit-for-bit SVG) ---
+reproducibility:
+  csv:
+    encoding: "utf-8"
+    line_terminator: "\n"
+    datetime_format: "%Y-%m-%d %H:%M:%S"
+    float_format: "%.5f"
+    include_index: false
+    final_newline: true
+  gzip:
+    deterministic: true
+    compresslevel: 6
+    mtime: 0
+    filename: ""
+  tar:
+    deterministic: true
+    compresslevel: 6
+    sort: lexicographic
+    uid: 0
+    gid: 0
+    uname: ""
+    gname: ""
+    mode: 420
+    mtime: 0
+  svg:
+    deterministic: true
+    hashsalt: "eurusd-v1"
+    fonttype: "none"
+    simplify: false
+    bbox_inches: null
+    strip_comments: true
+  reports:
+    include_run_timestamp: false
+    include_manifest_hash: true
+    include_inputs_block: true
+  manifest:
+    sort: path_asc
+    trailing_newline: true
+  run_id:
+    scheme: "sha256(input_csv_sha || input_txt_sha || calendar_sha || defaults_sha)"
