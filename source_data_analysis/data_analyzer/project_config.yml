@@ -140,3 +140,14 @@ scoring:
     monthly_cv: 1.00               # coefficient of variation target
     session_other: 0.10            # max acceptable share of 'Other' session
     longest_gap_hours_ok: 24.0     # hours threshold before completeness penalty
+
+runtime:
+  timeframe: M5 
+  ignore:
+    weekly_window_utc: "Fri 22:00 -> Sun 22:00"
+    fx_holiday_policy:
+      mode: minimal
+      include: [christmas, new_year, good_friday]
+      extended: false
+      extra_closures_utc:
+        - "2001-09-11T00:00:00Z -> 2001-09-15T00:00:00Z"

@@ -1,0 +1,13 @@
+runtime:
+  timeframe: M5   # or H1
+
+scoring:
+  profiles:
+    M5:
+      weights:
+        completeness: 0.12
+      targets:
+        small_share: 0.55
+    H1:
+      targets:
+        longest_gap_hours_ok: 36

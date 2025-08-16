@@ -11,7 +11,7 @@
 {{inputs_table_md}}
 
 ---
-## 1) Gap classification (>1 min)
+## 1) {{gaps_classification_header_md}}
 {{gap_classification_md}}
 
 ## 2) Durations (micro/medium/large)

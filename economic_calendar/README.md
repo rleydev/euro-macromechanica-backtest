@@ -176,7 +176,7 @@ The strategy already includes minimal, code‑feasible logic to react to sudden 
 
 ## 🛠 Compilation & Transparency
 
-The calendar was compiled using **[…/core_builder](https://github.com/rleydev/euro-macromechanica-backtest/tree/master/economic_calendar/calendar_builder)** and **ChatGPT‑5 (Thinking & Pro modes)** to improve efficiency. The builder implements the core data‑gathering logic; some parts are intentionally left light to keep the research‑mode environment flexible without unnecessary code.
+The calendar was compiled using **[…/calendar_builder](https://github.com/rleydev/euro-macromechanica-backtest/tree/master/economic_calendar/calendar_builder)** and **ChatGPT‑5 (Thinking & Pro modes)** to improve efficiency. The builder implements the core data‑gathering logic; some parts are intentionally left light to keep the research‑mode environment flexible without unnecessary code.
 
 Use the builder for your needs or to verify the transparency of this calendar, following the sections **Countries**, **News Scope**, and **Author’s Adjustments to Importance**.
 
