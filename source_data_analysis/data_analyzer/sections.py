@@ -782,10 +782,18 @@ def build_common_blocks(df: pd.DataFrame, gaps: pd.DataFrame, year: int):
     fx_count = int((tagged["reason"]=="holiday").sum())
 
     # weekend-only count for display
-    weekend_count = int((tagged["reason"]=="weekend/closed-hours").sum())
 
     # compute blocks on filtered only
     blocks = __prev_build_common_blocks(bars, filtered, year) if __prev_build_common_blocks else {}
+    # auto-inject dynamic header for annual template so runner is not required
+    try:
+        cfg_text = open("project_config.yml","r",encoding="utf-8",errors="ignore").read()
+        m_tf = re.search(r"(?m)^\s*timeframe\s*:\s*([A-Za-z0-9]+)\s*$", cfg_text)
+        tf = m_tf.group(1).upper() if m_tf else "M5"
+    except Exception:
+        tf = "M5"
+    base_min = {"M1":1,"M5":5,"H1":60}.get(tf,5)
+    blocks["gaps_classification_header_md"] = f"Gap classification (>{base_min} min)"
 
     # remove emoji badge lines (📆 🎉 📢 ⚙️ ❗) from classification text
     if "gap_classification_md" in blocks:
@@ -793,9 +801,31 @@ def build_common_blocks(df: pd.DataFrame, gaps: pd.DataFrame, year: int):
         _kept = [ln for ln in _lines if not re.search(r"[📆🎉📢⚙️❗]", ln)]
         blocks["gap_classification_md"] = "\n".join(_kept)
     # emoji_cleanup_done
-
-    # prepend weekend and FX holiday notes
+    # prepend weekend and FX holiday notes (single source of truth)
     if "gap_classification_md" in blocks:
+        _wk = f"_Weekend gaps (not scored): {weekend_count}._"
+        _fx = f"_FX holiday gaps (not scored): {fx_count}._"
+        body = blocks["gap_classification_md"].lstrip()
+        if _wk not in body:
+            body = _wk + "\n\n" + body
+        if _fx not in body:
+            body = _fx + "\n" + body
+        blocks["gap_classification_md"] = body
+
+    # --- tidy-up & align outputs ---
+    # 1) Avoid duplicate Timeframe line in assessment (keep wrapper version)
+    if "assessment_md" in blocks:
+        blocks["assessment_md"] = re.sub(r"(?:\n+)?\*\*Timeframe:\*\* [A-Z0-9]+$", "", blocks["assessment_md"]).strip()
+    # 2) Fix visuals filenames to include TF suffix
+    if "visuals_list_md" in blocks:
+        _vis = blocks["visuals_list_md"]
+        _vis = _vis.replace(f"EURUSD_{year}_anomalies.svg", f"EURUSD_{year}_anomalies_{tf}.svg")
+        _vis = _vis.replace(f"gaps_per_month_{year}.svg", f"gaps_per_month_{year}_{tf}.svg")
+        _vis = _vis.replace(f"gap_heatmap_{year}.svg", f"gap_heatmap_{year}_{tf}.svg")
+        blocks["visuals_list_md"] = _vis
+    # 3) Point gaps pointer to plain .md (we don't tar.gz the gaps report)
+    if "gaps_pointer_md" in blocks:
+        blocks["gaps_pointer_md"] = f"Full table is provided in `gaps_summary_{year}.md`."
         _wk = f"_Weekend gaps (not scored): {weekend_count}._"
         _fx = f"_FX holiday gaps (not scored): {fx_count}._"
         body = blocks["gap_classification_md"].lstrip()
@@ -865,6 +895,7 @@ def build_gaps_context(df, gaps, year):
     # fx_holiday_overlap_applied
     else:
         # keep previously computed filtered
+        pass
     # Session labeling (UTC)
     def _sess(ts):
         h = ts.hour + ts.minute/60.0
