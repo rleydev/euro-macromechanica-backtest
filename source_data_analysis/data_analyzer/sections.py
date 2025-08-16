@@ -767,7 +767,13 @@ def build_common_blocks(df: pd.DataFrame, gaps: pd.DataFrame, year: int):
     except Exception:
         _fx_wins = []
     if len(_fx_wins):
-        _mask_h = tagged["reason"].isna() & tagged["gap_start"].apply(lambda ts: fx_holidays.in_any_window(ts, _fx_wins))
+        # Option B: tag as holiday if the gap interval [start,end) overlaps any holiday window
+        def _overlaps_any(s, e, wins):
+            for (ws, we) in wins:
+                if (s < we) and (e > ws):
+                    return True
+            return False
+        _mask_h = tagged["reason"].isna() & tagged.apply(lambda r: _overlaps_any(r["gap_start"], r["gap_end"], _fx_wins), axis=1)
         if _mask_h.any():
             tagged.loc[_mask_h, "reason"] = "holiday"
     filtered = tagged[tagged["reason"].isna()].drop(columns=["reason"])
@@ -811,17 +817,8 @@ def build_common_blocks(df: pd.DataFrame, gaps: pd.DataFrame, year: int):
         blocks["assessment_md"] = (blocks.get("assessment_md","") + "\\n\\n" + note + f"\\n**Timeframe:** {tf}").strip()
     else:
         blocks["assessment_md"] = (blocks.get("assessment_md","") + f"\\n\\n**Timeframe:** {tf}").strip()
+    # duplicate weekend header injection removed
 
-    # show weekend-only note inside Gap classification block
-    weekend_note = f"_Weekend gaps (not scored): {weekend_count}._"
-    if "gaps_classification_header_md" in blocks:
-        blocks["gaps_classification_header_md"] = (
-            blocks["gaps_classification_header_md"].rstrip() + "\n" + weekend_note
-        )
-    elif "gap_classification_md" in blocks:
-        blocks["gap_classification_md"] = (
-            weekend_note + "\n\n" + blocks["gap_classification_md"].lstrip()
-        )
 
     # fix header text
     if "gaps_classification_header_md" in blocks:
@@ -844,9 +841,30 @@ def build_gaps_context(df, gaps, year):
     if '_tag_explainable' in globals():
         tagged = _tag_explainable(bar_g, cfg_text)
         filtered = tagged[tagged["reason"].isna()].drop(columns=["reason"])
+    # FX holiday overlap filter (Option B): keep only non-holiday gaps after overlap check
+    try:
+        _fx_wins = fx_holidays.fx_holiday_windows(year, cfg_text)
+    except Exception:
+        _fx_wins = []
+    if len(_fx_wins):
+        def _overlaps_any(s, e, wins):
+            for (ws, we) in wins:
+                if (s < we) and (e > ws):
+                    return True
+            return False
+        # ensure tagged frame exists (weekend/closed-hours already tagged upstream if available)
+        if 'tagged' in locals():
+            _tag = tagged.copy()
+        else:
+            _tag = filtered.copy()
+            _tag['reason'] = None
+        _mask_h = _tag['reason'].isna() & _tag.apply(lambda r: _overlaps_any(r['gap_start'], r['gap_end'], _fx_wins), axis=1)
+        if _mask_h.any():
+            _tag.loc[_mask_h, 'reason'] = 'holiday'
+        filtered = _tag[_tag['reason'].isna()].drop(columns=['reason'])
+    # fx_holiday_overlap_applied
     else:
-        filtered = bar_g
-
+        # keep previously computed filtered
     # Session labeling (UTC)
     def _sess(ts):
         h = ts.hour + ts.minute/60.0
